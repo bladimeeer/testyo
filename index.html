@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Us 💖</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: linear-gradient(135deg, #ffd6e0, #ffeef3);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* LOGIN */
+.screen {
+    text-align: center;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(255, 105, 135, 0.25);
+}
+
+.card input {
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid pink;
+}
+
+.card button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 20px;
+    background: #ff6b81;
+    color: white;
+}
+
+/* PHONE */
+.phone {
+    width: 360px;
+    height: 640px;
+    background: #fff0f5;
+    border-radius: 30px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(255, 105, 135, 0.3);
+}
+
+/* HEADER */
+.header {
+    background: linear-gradient(to right, #ff6b81, #ff85a2);
+    padding: 15px;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+}
+
+/* CHAT */
+.chat {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* MESSAGE */
+.msg {
+    padding: 10px 12px;
+    margin: 6px;
+    border-radius: 18px;
+    max-width: 75%;
+    font-size: 14px;
+}
+
+.me {
+    align-self: flex-end;
+    background: #ff6b81;
+    color: white;
+}
+
+.other {
+    align-self: flex-start;
+    background: white;
+    color: #ff4d6d;
+}
+
+/* INPUT */
+.inputArea {
+    display: flex;
+    padding: 10px;
+    background: #ffe4ec;
+}
+
+.inputArea input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 20px;
+    border: none;
+    outline: none;
+}
+
+.inputArea button {
+    margin-left: 10px;
+    width: 40px;
+    border-radius: 50%;
+    border: none;
+    background: #ff6b81;
+    color: white;
+}
+
+.hidden { display: none; }
+</style>
+
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="screen">
+    <div class="card">
+        <h2>💖 Enter your name</h2>
+        <input id="nameInput" placeholder="Your name...">
+        <button id="startBtn">Start Chat</button>
+    </div>
+</div>
+
+<!-- CHAT -->
+<div id="app" class="phone hidden">
+
+    <div class="header">💞 Our Chat</div>
+
+    <div id="chatBox" class="chat"></div>
+
+    <div class="inputArea">
+        <input id="msgInput" placeholder="Type a message...">
+        <button id="sendBtn">➤</button>
+    </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// 🔥 YOUR FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyCRD_lM2mq1yRnyEyj_2mbBZDU77oxsS3I",
+  authDomain: "chat-love-86ebf.firebaseapp.com",
+  projectId: "chat-love-86ebf"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// UI
+const login = document.getElementById("login");
+const appDiv = document.getElementById("app");
+const chatBox = document.getElementById("chatBox");
+
+let username = "";
+
+// START
+document.getElementById("startBtn").onclick = () => {
+    username = document.getElementById("nameInput").value;
+    if (!username) return;
+
+    login.style.display = "none";
+    appDiv.classList.remove("hidden");
+
+    listenMessages();
+};
+
+// SEND
+document.getElementById("sendBtn").onclick = async () => {
+    let input = document.getElementById("msgInput");
+    if (!input.value) return;
+
+    await addDoc(collection(db, "messages"), {
+        name: username,
+        text: input.value,
+        time: Date.now()
+    });
+
+    input.value = "";
+};
+
+// REAL TIME CHAT
+function listenMessages() {
+    const q = query(collection(db, "messages"), orderBy("time"));
+
+    onSnapshot(q, (snapshot) => {
+        chatBox.innerHTML = "";
+
+        snapshot.forEach(doc => {
+            let m = doc.data();
+
+            let div = document.createElement("div");
+            div.classList.add("msg");
+
+            if (m.name === username) {
+                div.classList.add("me");
+            } else {
+                div.classList.add("other");
+            }
+
+            div.innerText = m.name + ": " + m.text;
+            chatBox.appendChild(div);
+        });
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+}
+</script>
+
+</body>
+</html>
