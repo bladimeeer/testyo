@@ -3,20 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>what</title>
+<title>.</title>
 
 <style>
 body {
     margin: 0;
     font-family: Arial, sans-serif;
     background: linear-gradient(135deg, #ffd6e0, #ffeef3);
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
 }
 
-/* LOGIN ALWAYS FIRST */
 .hidden { display: none; }
 
 .screen { text-align: center; }
@@ -46,7 +45,6 @@ body {
     cursor: pointer;
 }
 
-/* APP - STRICT HIDE UNTIL LOGIN */
 .phone {
     display: none;
     width: 380px;
@@ -58,9 +56,7 @@ body {
     overflow: hidden;
 }
 
-.phone.show {
-    display: flex;
-}
+.phone.show { display: flex; }
 
 .header {
     background: linear-gradient(to right, #ff6b81, #ff85a2);
@@ -84,21 +80,18 @@ body {
     padding: 10px 12px;
     border-radius: 18px;
     font-size: 14px;
-    word-wrap: break-word;
 }
 
 .me {
     align-self: flex-end;
     background: #ff6b81;
     color: white;
-    border-bottom-right-radius: 5px;
 }
 
 .other {
     align-self: flex-start;
     background: white;
     color: #ff4d6d;
-    border-bottom-left-radius: 5px;
 }
 
 .meta {
@@ -107,10 +100,23 @@ body {
     margin-top: 3px;
 }
 
+.time {
+    font-size: 9px;
+    opacity: 0.6;
+    margin-top: 2px;
+}
+
 .seen {
     font-size: 10px;
     opacity: 0.6;
     margin-top: 2px;
+}
+
+.typing {
+    font-size: 12px;
+    opacity: 0.7;
+    padding: 5px 10px;
+    color: #ff4d6d;
 }
 
 .inputArea {
@@ -141,21 +147,23 @@ body {
 
 <body>
 
-<!-- LOGIN FIRST -->
+<!-- LOGIN -->
 <div id="login" class="screen">
     <div class="card">
-        <h2>💖 Enter your name first</h2>
+        <h2>💖 Enter your name</h2>
         <input id="nameInput" placeholder="Your name...">
         <button id="startBtn">Start Chat</button>
     </div>
 </div>
 
-<!-- CHAT (hidden until login) -->
+<!-- APP -->
 <div id="app" class="phone">
 
     <div class="header">💞</div>
 
     <div id="chatBox" class="chat"></div>
+
+    <div id="typingBox" class="typing"></div>
 
     <div class="inputArea">
         <input id="msgInput" placeholder="Type a message...">
@@ -166,7 +174,7 @@ body {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, updateDoc, doc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, updateDoc, doc, arrayUnion, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCRD_lM2mq1yRnyEyj_2mbBZDU77oxsS3I",
@@ -180,15 +188,16 @@ const db = getFirestore(app);
 const login = document.getElementById("login");
 const appDiv = document.getElementById("app");
 const chatBox = document.getElementById("chatBox");
+const typingBox = document.getElementById("typingBox");
 const msgInput = document.getElementById("msgInput");
 
 let username = "";
 let listenerStarted = false;
 
+// LOGIN
 function startChat() {
     const input = document.getElementById("nameInput").value.trim();
-
-    if (!input) return alert("Please enter your name 💖");
+    if (!input) return alert("Enter name 💖");
 
     username = input;
 
@@ -197,14 +206,16 @@ function startChat() {
 
     if (!listenerStarted) {
         listenMessages();
+        listenTyping();
         listenerStarted = true;
     }
 }
 
 document.getElementById("startBtn").onclick = startChat;
 
+// SEND MESSAGE
 async function sendMessage() {
-    if (!username) return alert("Enter name first 💖");
+    if (!username) return;
     if (!msgInput.value) return;
 
     await addDoc(collection(db, "messages"), {
@@ -223,19 +234,18 @@ msgInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") sendMessage();
 });
 
-async function markSeen(id, data) {
+// TYPING UPDATE
+msgInput.addEventListener("input", async () => {
     if (!username) return;
 
-    if (data.name !== username && !data.seenBy?.includes(username)) {
-        await updateDoc(doc(db, "messages", id), {
-            seenBy: arrayUnion(username)
-        });
-    }
-}
+    await setDoc(doc(db, "typing", username), {
+        name: username,
+        time: serverTimestamp()
+    });
+});
 
+// CHAT
 function listenMessages() {
-    if (!username) return;
-
     const q = query(collection(db, "messages"), orderBy("time"));
 
     onSnapshot(q, (snapshot) => {
@@ -243,8 +253,6 @@ function listenMessages() {
 
         snapshot.forEach(docSnap => {
             const m = docSnap.data();
-
-            markSeen(docSnap.id, m);
 
             const wrapper = document.createElement("div");
             wrapper.classList.add("msg", m.name === username ? "me" : "other");
@@ -256,20 +264,47 @@ function listenMessages() {
             meta.classList.add("meta");
             meta.innerText = m.name;
 
+            const time = document.createElement("div");
+            time.classList.add("time");
+
+            let t = m.time?.toDate ? m.time.toDate() : new Date();
+            time.innerText = t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+            const seen = document.createElement("div");
+            seen.classList.add("seen");
+            seen.innerText = (m.seenBy && m.seenBy.length > 1) ? "Seen ✓" : "Sent";
+
             wrapper.appendChild(text);
             wrapper.appendChild(meta);
+            wrapper.appendChild(time);
 
-            if (m.name === username) {
-                const seen = document.createElement("div");
-                seen.classList.add("seen");
-                seen.innerText = (m.seenBy && m.seenBy.length > 1) ? "Seen ✓" : "Sent";
-                wrapper.appendChild(seen);
-            }
+            if (m.name === username) wrapper.appendChild(seen);
 
             chatBox.appendChild(wrapper);
         });
 
         chatBox.scrollTop = chatBox.scrollHeight;
+    });
+}
+
+// TYPING INDICATOR
+function listenTyping() {
+    onSnapshot(collection(db, "typing"), (snapshot) => {
+        let typingUsers = [];
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+
+            if (data.name !== username) {
+                typingUsers.push(data.name);
+            }
+        });
+
+        if (typingUsers.length > 0) {
+            typingBox.innerText = typingUsers.join(", ") + " is typing...";
+        } else {
+            typingBox.innerText = "";
+        }
     });
 }
 </script>
