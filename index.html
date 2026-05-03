@@ -3,64 +3,67 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Messenger Style Chat 💬</title>
+<title>what</title>
 
 <style>
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: #f0f2f5;
+    background: linear-gradient(135deg, #ffd6e0, #ffeef3);
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
 }
 
+/* LOGIN ALWAYS FIRST */
 .hidden { display: none; }
 
-/* LOGIN */
-.screen {
-    text-align: center;
-}
+.screen { text-align: center; }
 
 .card {
     background: white;
     padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(255, 105, 135, 0.25);
 }
 
 .card input {
     padding: 10px;
     width: 80%;
     border-radius: 10px;
-    border: 1px solid #ccc;
+    border: 1px solid pink;
+    outline: none;
 }
 
 .card button {
     margin-top: 10px;
     padding: 10px 20px;
     border: none;
-    border-radius: 10px;
-    background: #0084ff;
+    border-radius: 20px;
+    background: #ff6b81;
     color: white;
     cursor: pointer;
 }
 
-/* APP */
+/* APP - STRICT HIDE UNTIL LOGIN */
 .phone {
+    display: none;
     width: 380px;
     height: 650px;
-    background: white;
+    background: #fff0f5;
     border-radius: 20px;
-    display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+    box-shadow: 0 20px 50px rgba(255, 105, 135, 0.25);
     overflow: hidden;
 }
 
+.phone.show {
+    display: flex;
+}
+
 .header {
-    background: #0084ff;
+    background: linear-gradient(to right, #ff6b81, #ff85a2);
     color: white;
     padding: 15px;
     text-align: center;
@@ -76,7 +79,6 @@ body {
     gap: 8px;
 }
 
-/* MESSAGES */
 .msg {
     max-width: 70%;
     padding: 10px 12px;
@@ -87,37 +89,41 @@ body {
 
 .me {
     align-self: flex-end;
-    background: #0084ff;
+    background: #ff6b81;
     color: white;
     border-bottom-right-radius: 5px;
 }
 
 .other {
     align-self: flex-start;
-    background: #e4e6eb;
-    color: black;
+    background: white;
+    color: #ff4d6d;
     border-bottom-left-radius: 5px;
 }
 
 .meta {
     font-size: 10px;
-    opacity: 0.6;
+    opacity: 0.7;
     margin-top: 3px;
 }
 
-/* INPUT */
+.seen {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-top: 2px;
+}
+
 .inputArea {
     display: flex;
     padding: 10px;
-    border-top: 1px solid #ddd;
-    background: #fff;
+    background: #ffe4ec;
 }
 
 .inputArea input {
     flex: 1;
     padding: 10px;
     border-radius: 20px;
-    border: 1px solid #ddd;
+    border: none;
     outline: none;
 }
 
@@ -126,7 +132,7 @@ body {
     width: 45px;
     border-radius: 50%;
     border: none;
-    background: #0084ff;
+    background: #ff6b81;
     color: white;
     cursor: pointer;
 }
@@ -135,19 +141,19 @@ body {
 
 <body>
 
-<!-- LOGIN -->
+<!-- LOGIN FIRST -->
 <div id="login" class="screen">
     <div class="card">
-        <h2>Enter your name 💬</h2>
+        <h2>💖 Enter your name first</h2>
         <input id="nameInput" placeholder="Your name...">
         <button id="startBtn">Start Chat</button>
     </div>
 </div>
 
-<!-- APP -->
-<div id="app" class="phone hidden">
+<!-- CHAT (hidden until login) -->
+<div id="app" class="phone">
 
-    <div class="header">Messenger Chat 💙</div>
+    <div class="header">💞</div>
 
     <div id="chatBox" class="chat"></div>
 
@@ -160,7 +166,7 @@ body {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, updateDoc, doc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCRD_lM2mq1yRnyEyj_2mbBZDU77oxsS3I",
@@ -177,28 +183,35 @@ const chatBox = document.getElementById("chatBox");
 const msgInput = document.getElementById("msgInput");
 
 let username = "";
+let listenerStarted = false;
 
-// START CHAT
 function startChat() {
-    username = document.getElementById("nameInput").value;
-    if (!username) return;
+    const input = document.getElementById("nameInput").value.trim();
+
+    if (!input) return alert("Please enter your name 💖");
+
+    username = input;
 
     login.classList.add("hidden");
-    appDiv.classList.remove("hidden");
+    appDiv.classList.add("show");
 
-    listenMessages();
+    if (!listenerStarted) {
+        listenMessages();
+        listenerStarted = true;
+    }
 }
 
 document.getElementById("startBtn").onclick = startChat;
 
-// SEND MESSAGE
 async function sendMessage() {
+    if (!username) return alert("Enter name first 💖");
     if (!msgInput.value) return;
 
     await addDoc(collection(db, "messages"), {
         name: username,
         text: msgInput.value,
-        time: serverTimestamp()
+        time: serverTimestamp(),
+        seenBy: [username]
     });
 
     msgInput.value = "";
@@ -210,15 +223,28 @@ msgInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") sendMessage();
 });
 
-// REALTIME
+async function markSeen(id, data) {
+    if (!username) return;
+
+    if (data.name !== username && !data.seenBy?.includes(username)) {
+        await updateDoc(doc(db, "messages", id), {
+            seenBy: arrayUnion(username)
+        });
+    }
+}
+
 function listenMessages() {
+    if (!username) return;
+
     const q = query(collection(db, "messages"), orderBy("time"));
 
     onSnapshot(q, (snapshot) => {
         chatBox.innerHTML = "";
 
-        snapshot.forEach(doc => {
-            const m = doc.data();
+        snapshot.forEach(docSnap => {
+            const m = docSnap.data();
+
+            markSeen(docSnap.id, m);
 
             const wrapper = document.createElement("div");
             wrapper.classList.add("msg", m.name === username ? "me" : "other");
@@ -232,6 +258,13 @@ function listenMessages() {
 
             wrapper.appendChild(text);
             wrapper.appendChild(meta);
+
+            if (m.name === username) {
+                const seen = document.createElement("div");
+                seen.classList.add("seen");
+                seen.innerText = (m.seenBy && m.seenBy.length > 1) ? "Seen ✓" : "Sent";
+                wrapper.appendChild(seen);
+            }
 
             chatBox.appendChild(wrapper);
         });
