@@ -3,18 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Us 💖</title>
+<title>Messenger Style Chat 💬</title>
 
 <style>
 body {
     margin: 0;
-    font-family: Arial;
-    background: linear-gradient(135deg, #ffd6e0, #ffeef3);
-    height: 100vh;
+    font-family: Arial, sans-serif;
+    background: #f0f2f5;
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 100vh;
 }
+
+.hidden { display: none; }
 
 /* LOGIN */
 .screen {
@@ -24,103 +26,111 @@ body {
 .card {
     background: white;
     padding: 25px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(255, 105, 135, 0.25);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
 .card input {
     padding: 10px;
+    width: 80%;
     border-radius: 10px;
-    border: 1px solid pink;
+    border: 1px solid #ccc;
 }
 
 .card button {
     margin-top: 10px;
     padding: 10px 20px;
     border: none;
-    border-radius: 20px;
-    background: #ff6b81;
+    border-radius: 10px;
+    background: #0084ff;
     color: white;
+    cursor: pointer;
 }
 
-/* PHONE */
+/* APP */
 .phone {
-    width: 360px;
-    height: 640px;
-    background: #fff0f5;
-    border-radius: 30px;
-    overflow: hidden;
+    width: 380px;
+    height: 650px;
+    background: white;
+    border-radius: 20px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(255, 105, 135, 0.3);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+    overflow: hidden;
 }
 
-/* HEADER */
 .header {
-    background: linear-gradient(to right, #ff6b81, #ff85a2);
+    background: #0084ff;
+    color: white;
     padding: 15px;
     text-align: center;
-    color: white;
     font-weight: bold;
 }
 
-/* CHAT */
 .chat {
     flex: 1;
     padding: 10px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    gap: 8px;
 }
 
-/* MESSAGE */
+/* MESSAGES */
 .msg {
+    max-width: 70%;
     padding: 10px 12px;
-    margin: 6px;
     border-radius: 18px;
-    max-width: 75%;
     font-size: 14px;
+    word-wrap: break-word;
 }
 
 .me {
     align-self: flex-end;
-    background: #ff6b81;
+    background: #0084ff;
     color: white;
+    border-bottom-right-radius: 5px;
 }
 
 .other {
     align-self: flex-start;
-    background: white;
-    color: #ff4d6d;
+    background: #e4e6eb;
+    color: black;
+    border-bottom-left-radius: 5px;
+}
+
+.meta {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-top: 3px;
 }
 
 /* INPUT */
 .inputArea {
     display: flex;
     padding: 10px;
-    background: #ffe4ec;
+    border-top: 1px solid #ddd;
+    background: #fff;
 }
 
 .inputArea input {
     flex: 1;
     padding: 10px;
     border-radius: 20px;
-    border: none;
+    border: 1px solid #ddd;
     outline: none;
 }
 
 .inputArea button {
-    margin-left: 10px;
-    width: 40px;
+    margin-left: 8px;
+    width: 45px;
     border-radius: 50%;
     border: none;
-    background: #ff6b81;
+    background: #0084ff;
     color: white;
+    cursor: pointer;
 }
-
-.hidden { display: none; }
 </style>
-
 </head>
 
 <body>
@@ -128,16 +138,16 @@ body {
 <!-- LOGIN -->
 <div id="login" class="screen">
     <div class="card">
-        <h2>💖 Enter your name</h2>
+        <h2>Enter your name 💬</h2>
         <input id="nameInput" placeholder="Your name...">
         <button id="startBtn">Start Chat</button>
     </div>
 </div>
 
-<!-- CHAT -->
+<!-- APP -->
 <div id="app" class="phone hidden">
 
-    <div class="header">💞 Our Chat</div>
+    <div class="header">Messenger Chat 💙</div>
 
     <div id="chatBox" class="chat"></div>
 
@@ -150,58 +160,57 @@ body {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  query,
-  orderBy,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// 🔥 YOUR FIREBASE CONFIG
 const firebaseConfig = {
-  apiKey: "AIzaSyCRD_lM2mq1yRnyEyj_2mbBZDU77oxsS3I",
-  authDomain: "chat-love-86ebf.firebaseapp.com",
-  projectId: "chat-love-86ebf"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// UI
 const login = document.getElementById("login");
 const appDiv = document.getElementById("app");
 const chatBox = document.getElementById("chatBox");
+const msgInput = document.getElementById("msgInput");
 
 let username = "";
 
-// START
-document.getElementById("startBtn").onclick = () => {
+// START CHAT
+function startChat() {
     username = document.getElementById("nameInput").value;
     if (!username) return;
 
-    login.style.display = "none";
+    login.classList.add("hidden");
     appDiv.classList.remove("hidden");
 
     listenMessages();
-};
+}
 
-// SEND
-document.getElementById("sendBtn").onclick = async () => {
-    let input = document.getElementById("msgInput");
-    if (!input.value) return;
+document.getElementById("startBtn").onclick = startChat;
+
+// SEND MESSAGE
+async function sendMessage() {
+    if (!msgInput.value) return;
 
     await addDoc(collection(db, "messages"), {
         name: username,
-        text: input.value,
-        time: Date.now()
+        text: msgInput.value,
+        time: serverTimestamp()
     });
 
-    input.value = "";
-};
+    msgInput.value = "";
+}
 
-// REAL TIME CHAT
+document.getElementById("sendBtn").onclick = sendMessage;
+
+msgInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendMessage();
+});
+
+// REALTIME
 function listenMessages() {
     const q = query(collection(db, "messages"), orderBy("time"));
 
@@ -209,19 +218,22 @@ function listenMessages() {
         chatBox.innerHTML = "";
 
         snapshot.forEach(doc => {
-            let m = doc.data();
+            const m = doc.data();
 
-            let div = document.createElement("div");
-            div.classList.add("msg");
+            const wrapper = document.createElement("div");
+            wrapper.classList.add("msg", m.name === username ? "me" : "other");
 
-            if (m.name === username) {
-                div.classList.add("me");
-            } else {
-                div.classList.add("other");
-            }
+            const text = document.createElement("div");
+            text.innerText = m.text;
 
-            div.innerText = m.name + ": " + m.text;
-            chatBox.appendChild(div);
+            const meta = document.createElement("div");
+            meta.classList.add("meta");
+            meta.innerText = m.name;
+
+            wrapper.appendChild(text);
+            wrapper.appendChild(meta);
+
+            chatBox.appendChild(wrapper);
         });
 
         chatBox.scrollTop = chatBox.scrollHeight;
